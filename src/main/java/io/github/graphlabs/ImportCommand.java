@@ -57,7 +57,6 @@ public class ImportCommand implements Command {
                         executor.commit(tx -> {
                             batch.forEach(tx::run);
                         });
-
                     });
 
         } catch (IOException ignored) {
@@ -75,23 +74,5 @@ public class ImportCommand implements Command {
 
     private BufferedReader reader(String resource) {
         return new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(resource)));
-    }
-}
-
-class Tuple2<U, V> {
-    private final U v1;
-    private final V v2;
-
-    public Tuple2(U v1, V v2) {
-        this.v1 = v1;
-        this.v2 = v2;
-    }
-
-    public U getV1() {
-        return v1;
-    }
-
-    public V getV2() {
-        return v2;
     }
 }
