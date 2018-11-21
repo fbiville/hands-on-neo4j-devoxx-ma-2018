@@ -8,11 +8,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.BaseStream;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static java.util.function.Function.identity;
 
 public class ImportCommand implements Command {
 
-    private static final int BATCH_SIZE = 5_000;
+    private static final int BATCH_SIZE = 1_000;
 
     private final CypherQueryExecutor executor;
 
@@ -33,24 +38,17 @@ public class ImportCommand implements Command {
     @Override
     public void accept(TraineeSession traineeSession, String unused) {
         traineeSession.reset();
-        insertIndices();
-        insertData();
-        cleanUpIndices();
+        executeInSingleTx("/cineasts-indices.cypher");
+        executeInBatch("/cineasts-nodes.cypher", BaseStream::parallel);
+        executeInBatch("/cineasts-rels.cypher", identity());
+        executeInSingleTx("/cineasts-cleanup.cypher");
+        executeInSingleTx("/cineasts-indices-cleanup.cypher");
     }
 
-    private void insertIndices() {
-        try (BufferedReader reader = reader("/indices.cypher")) {
-            executor.commit((tx) -> {
-                reader.lines().forEach(tx::run);
-            });
-        } catch (IOException ignored) {
-        }
-    }
-
-    private void insertData() {
-        try (BufferedReader reader = reader("/cineasts.cypher")) {
+    private void executeInBatch(String resource, Function<Stream<String>, Stream<String>> transformStream) {
+        try (BufferedReader reader = reader(resource)) {
             AtomicInteger counter = new AtomicInteger(0);
-            reader.lines()
+            transformStream.apply(reader.lines())
                     .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / BATCH_SIZE))
                     .values()
                     .forEach(batch -> {
@@ -63,8 +61,8 @@ public class ImportCommand implements Command {
         }
     }
 
-    private void cleanUpIndices() {
-        try (BufferedReader reader = reader("/indices-cleanup.cypher")) {
+    private void executeInSingleTx(String s) {
+        try (BufferedReader reader = reader(s)) {
             executor.commit((tx) -> {
                 reader.lines().forEach(tx::run);
             });
