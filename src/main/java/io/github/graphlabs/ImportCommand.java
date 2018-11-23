@@ -4,22 +4,27 @@ import net.biville.florent.repl.console.commands.Command;
 import net.biville.florent.repl.exercises.TraineeSession;
 import net.biville.florent.repl.graph.cypher.CypherQueryExecutor;
 
+import static java.util.function.Function.identity;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.BaseStream;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.function.Function.identity;
-
 public class ImportCommand implements Command {
 
-    private static final int BATCH_SIZE = 1_000;
+    private static final int BATCH_SIZE = 200;
 
     private final CypherQueryExecutor executor;
+
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
+
 
     public ImportCommand(CypherQueryExecutor executor) {
         this.executor = executor;
@@ -52,8 +57,10 @@ public class ImportCommand implements Command {
                     .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / BATCH_SIZE))
                     .values()
                     .forEach(batch -> {
-                        executor.commit(tx -> {
-                            batch.forEach(tx::run);
+                        executorService.execute(() -> {
+                            executor.commit(tx -> {
+                                batch.forEach(tx::run);
+                            });
                         });
                     });
 
