@@ -1,5 +1,7 @@
 # Devoxx Morocco 2018 - Cypher workshop
 
+This README is intended for maintainers only!
+
 ## Getting started
 
  1. make sure the credentials are correct in `generate-importable-exercises.sh` (piece of advice: use git-crypt or read password from env)
