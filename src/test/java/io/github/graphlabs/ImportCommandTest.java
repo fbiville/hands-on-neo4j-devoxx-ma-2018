@@ -11,10 +11,16 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.Neo4jRule;
 
+import java.util.logging.LogManager;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 public class ImportCommandTest {
+
+    static {
+        LogManager.getLogManager().reset();
+    }
 
     @Rule
     public Neo4jRule neo4j = new Neo4jRule();
