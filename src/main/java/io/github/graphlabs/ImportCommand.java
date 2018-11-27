@@ -7,8 +7,7 @@ import net.biville.florent.repl.graph.cypher.CypherQueryExecutor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.time.Duration;
-import java.time.Instant;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -16,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class ImportCommand implements Command {
 
@@ -49,7 +50,7 @@ public class ImportCommand implements Command {
     }
 
     private void concurrentlyImportInBatch(String resource, int batchSize) {
-        try (BufferedReader reader = reader(resource)) {
+        try (BufferedReader reader = reader(resource, UTF_8)) {
 
             AtomicInteger counter = new AtomicInteger(0);
             Collection<List<String>> statementBatches = reader.lines().parallel()
@@ -70,7 +71,7 @@ public class ImportCommand implements Command {
     }
 
     private void seriallyImportInBatch(String resource, int batchSize) {
-        try (BufferedReader reader = reader(resource)) {
+        try (BufferedReader reader = reader(resource, UTF_8)) {
             AtomicInteger counter = new AtomicInteger(0);
             reader.lines()
                     .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / batchSize))
@@ -83,8 +84,8 @@ public class ImportCommand implements Command {
         }
     }
 
-    private void executeInSingleTx(String s) {
-        try (BufferedReader reader = reader(s)) {
+    private void executeInSingleTx(String resource) {
+        try (BufferedReader reader = reader(resource, UTF_8)) {
             queryExecutor.commit((tx) -> {
                 reader.lines().forEach(tx::run);
             });
@@ -92,7 +93,7 @@ public class ImportCommand implements Command {
         }
     }
 
-    private BufferedReader reader(String resource) {
-        return new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(resource)));
+    private BufferedReader reader(String resource, Charset charset) {
+        return new BufferedReader(new InputStreamReader(this.getClass().getResourceAsStream(resource), charset));
     }
 }
